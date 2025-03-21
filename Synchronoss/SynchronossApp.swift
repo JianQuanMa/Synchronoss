@@ -11,7 +11,10 @@ import SwiftUI
 struct SynchronossApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            NavigationStack {
+                ImageFeedFeature()
+                    .navigationTitle("List feature")
+            }
         }
     }
 }

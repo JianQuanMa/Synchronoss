@@ -7,7 +7,16 @@
 
 import SwiftUI
 
-struct ContentView: View {
+@MainActor
+struct ImageFeedFeature: View {
+    @StateObject private var viewModel = ImageFeedViewModel()
+    
+    var body: some View {
+        Text("hello")
+    }
+}
+
+struct ImageFeedViewModel: View {
     var body: some View {
         VStack {
             Image(systemName: "globe")
@@ -20,7 +29,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ImageFeedFeature()
 }
 
 
