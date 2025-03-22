@@ -5,7 +5,7 @@
 //  Created by Jian Ma on 3/21/25.
 //
 
-import Foundation
+import SwiftUI
 
 struct ImageItem: Identifiable, Equatable {
     enum URLOrImage: Equatable {

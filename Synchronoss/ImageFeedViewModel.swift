@@ -4,6 +4,7 @@
 //
 //  Created by Jian Ma on 3/21/25.
 //
+import SwiftUI
 
 @MainActor
 final class ImageFeedViewModel: ObservableObject {
