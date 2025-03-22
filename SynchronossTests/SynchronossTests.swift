@@ -5,32 +5,61 @@
 //  Created by Jian Ma on 3/21/25.
 //
 
+
+
 import XCTest
+import SwiftUI
 @testable import Synchronoss
 
-final class SynchronossTests: XCTestCase {
-
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+@MainActor
+final class ImageFeedViewModelTests: XCTestCase {
+    func testOnAppear() {
+        let (_, viewModel) = makeSUT()
+        viewModel.onImageFeedViewAction(.onAppear)
+        
+        XCTAssertEqual(viewModel.imageFeedViewState, .loading)
     }
+    
+    func testFetchImagesSuccess() async {
+        let apiItemStub = APIImageItem(id: "1", author: "Test Author")
+        let (_, viewModel) = makeSUT(apiItemStub: .success([apiItemStub]))
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        viewModel.onImageFeedViewAction(.onAppear)
+
+        XCTAssertEqual(viewModel.imageFeedViewState, .loading)
+        
+        await Task.yield()
+        
+        XCTAssertEqual(viewModel.imageFeedViewState, .list([
+            .init(
+                id: apiItemStub.id,
+                author: apiItemStub.author,
+                urlOrImage: .url(apiItemStub.url))
+        ], false))
     }
+    
+    func testFetchImagesFailure() async {
+        let (_, viewModel) = makeSUT(
+            apiItemStub: .failure(URLError(.badServerResponse))
+        )
 
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // Any test you write for XCTest can be annotated as throws and async.
-        // Mark your test throws to produce an unexpected failure when your test encounters an uncaught error.
-        // Mark your test async to allow awaiting for asynchronous code to complete. Check the results with assertions afterwards.
-    }
+        viewModel.onImageFeedViewAction(.onAppear)
 
-    func testPerformanceExample() throws {
-        // This is an example of a performance test case.
-        self.measure {
-            // Put the code you want to measure the time of here.
+        await Task.yield()
+        
+        switch viewModel.imageFeedViewState {
+        case .failed(false):
+            XCTAssertTrue(true)
+        default:
+            XCTFail("Expected failed state")
         }
     }
-
+    
+    private func makeSUT(
+        apiItemStub: Result<[APIImageItem], Error> = .success([APIImageItem(id: "1", author: "Test Author")])
+    ) -> (ListClient, ImageFeedViewModel) {
+        let mockClient = ListClient { _ in apiItemStub }
+        let viewModel = ImageFeedViewModel(client: mockClient)
+        return (mockClient, viewModel)
+    }
 }
