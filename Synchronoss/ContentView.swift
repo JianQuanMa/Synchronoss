@@ -9,14 +9,46 @@ import SwiftUI
 @MainActor
 struct ImageFeedFeature: View {
     @StateObject private var viewModel = ImageFeedViewModel()
-    
+    @Environment(\.openURL) var openURL
+
     var body: some View {
-        ImageFeedView(
-            state: viewModel.imageFeedViewState,
-            action: {
-                viewModel.onImageFeedViewAction($0)
-            }
-        )
+        NavigationStack {
+            ImageFeedView(
+                state: viewModel.imageFeedViewState,
+                action: {
+                    viewModel.onImageFeedViewAction($0)
+                }
+            )
+            .navigationTitle("List feature")
+            .sheet(
+                isPresented: $viewModel.isDetailPresented,
+                content: {
+                    if let detail = viewModel.detail {
+                        VStack(spacing: 16) {
+                            Text(detail.title)
+                            Text(detail.subtitle)
+                            
+                            if detail.isLoading {
+                                ProgressView()
+                            }
+                            
+                            if let jsonString = detail.jsonString {
+                                Text(jsonString)
+                            }
+                                                        
+                            detail.url.map { url in
+                                
+                                Button("Open image url") {
+                                    openURL(url)
+                                }
+                                .font(.title)
+                                .padding()
+                            }
+                        }
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -32,17 +64,19 @@ struct ImageFeedView: View {
         case onAppear
         case onRetryButtonTapped
         
+        case onItemTapped(ImageItem)
         case onItemAppear(ImageItem.ID)
         case onImageSuccess(Image, ImageItem)
         // privates
         case onImagesResponse(Result<[APIImageItem], Error>)
+        case onImageDetailResponse(Result<APIImageDetail, Error>, ImageFeedViewModel.Detail)
+
     }
     
     let state: State
     let action: (Action) -> Void
     
     var body: some View {
-        
         VStack {
             switch state {
             case .loading:
@@ -73,6 +107,9 @@ struct ImageFeedView: View {
                                     action(.onImageSuccess($0, $1))
                                 }
                             )
+                            .onTapGesture {
+                                action(.onItemTapped(item))
+                            }
                             .onAppear {
                                 action(.onItemAppear(item.id))
                             }
@@ -87,6 +124,7 @@ struct ImageFeedView: View {
         }
         
     }
+    
     private func listRow(
         _ item: ImageItem,
         in items: [ImageItem],

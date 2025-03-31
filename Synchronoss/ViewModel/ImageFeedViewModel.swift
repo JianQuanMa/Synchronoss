@@ -48,6 +48,34 @@ final class ImageFeedViewModel: ObservableObject {
         self.imageCache = imageCache
     }
     
+    struct Detail: Identifiable, Hashable {
+        
+        let title: String
+        let subtitle: String
+        var isLoading: Bool
+        var jsonString: String?
+        var url: URL?
+
+        var id: Self {
+            self
+        }
+    }
+    
+    
+    var isDetailPresented: Bool {
+        get {
+            detail != nil
+        }
+        set {
+            if newValue == false {
+                detail = nil
+            }
+        }
+    }
+    
+
+    @Published private(set) var detail: Detail?
+    
     var imageFeedViewState: ImageFeedView.State {
         switch imageFetchStatus {
         case .loading(let reason):
@@ -101,11 +129,26 @@ final class ImageFeedViewModel: ObservableObject {
         }
     }
     
-    
     @discardableResult
     func onImageFeedViewAction(_ action: ImageFeedView.Action) -> Task<Void, Never>? {
         print("-=- action \(action)")
         switch action {
+        case .onItemTapped(let imageItem):
+
+            let detailScreen = Detail(
+                title: imageItem.author,
+                subtitle: "id:" + imageItem.id,
+                isLoading: true, // TODO; - implement loading.
+                jsonString: nil
+            )
+
+            detail = detailScreen
+
+            Task {
+                onImageFeedViewAction(
+                    .onImageDetailResponse(await client.fetchDetails(imageItem.id), detailScreen)
+                )
+            }
         case .onItemAppear(let imageItemID):
             if let images, imageItemID == images.last?.id, !imageFetchStatus.isInFlight {
                 return fetch(for: .paginate(images, page))
@@ -121,6 +164,51 @@ final class ImageFeedViewModel: ObservableObject {
             case .failure:
                 break
             }
+        case .onImageDetailResponse(let response, var detail):
+            // do something..
+            
+            detail.isLoading = false
+            
+            
+            
+
+//            let success = (try? response.get())
+//                .flatMap { try? JSONEncoder().encode($0) }
+//                .flatMap { String(data: $0, encoding: .utf8) }
+            
+//               let jsonData = try? JSONEncoder().encode(success)
+//               let jsonString = String(data: jsonData, encoding: .utf8) {
+//                detail.jsonString = jsonString
+//                detail.url = success.url
+//            }
+            
+//            do {
+//
+//                let success = try response.get()
+//                let jsonData = try JSONEncoder().encode(success)
+//                let jsonString = String(data: jsonData, encoding: .utf8)
+//                detail.jsonString = jsonString
+//                detail.url = success.url
+//
+//
+//            } catch {
+//
+//            }
+            
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+
+            if let success = try? response.get(),
+               let jsonData = try? encoder.encode(success),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                detail.jsonString = jsonString
+                detail.url = success.url
+            }
+//
+
+            self.detail = detail
+            
+            
         case .onImageSuccess(let image, let item):
             imageCache[item.id] = image
         case .onRetryButtonTapped:
@@ -134,8 +222,7 @@ final class ImageFeedViewModel: ObservableObject {
     private func fetch(for reason: Reason) -> Task<Void, Never> {
         Task {
             imageFetchStatus = .loading(reason)
-            
-            
+                        
             let raw = await client.fetch(page)
             
             let result: Result<[APIImageItem], Error>
