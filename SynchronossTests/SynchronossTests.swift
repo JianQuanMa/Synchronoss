@@ -56,10 +56,12 @@ final class ImageFeedViewModelTests: XCTestCase {
     }
     
     private func makeSUT(
-        apiItemStub: Result<[APIImageItem], Error> = .success([APIImageItem(id: "1", author: "Test Author")])
+        apiItemStub: Result<[APIImageItem], Error> = .success([APIImageItem(id: "1", author: "Test Author")]),
+        fetchDetailsStub: @escaping (String) async -> Result<APIImageDetail, Error> = { _ in .failure(NSError(domain: "Test", code: 0)) }
     ) -> (ListClient, ImageFeedViewModel) {
-        let mockClient = ListClient { _ in apiItemStub }
+        let mockClient = ListClient(fetch: { _ in apiItemStub }, fetchDetails: fetchDetailsStub)
         let viewModel = ImageFeedViewModel(client: mockClient)
         return (mockClient, viewModel)
     }
+
 }
